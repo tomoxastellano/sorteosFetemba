@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sorteo de Zonas</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #e0f2fe, #f1f5f9);
+    margin: 0;
+    padding: 20px;
+    color: #1e293b;
+  }
+  .container {
+    max-width: 1200px;
+    margin: auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    padding: 30px;
+    animation: fadeIn 0.6s ease;
+  }
+  h1 {
+    text-align: center;
+    color: #0f172a;
+    margin-bottom: 10px;
+  }
+  p.subtitle {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 25px;
+  }
+  label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+    color: #334155;
+  }
+  textarea {
+    width: 100%;
+    height: 200px;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 1rem;
+    resize: vertical;
+  }
+  textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.3);
+  }
+  .buttons {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+  }
+  button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  button.sortear {
+    background-color: #3b82f6;
+    color: white;
+  }
+  button.sortear:hover {
+    background-color: #2563eb;
+  }
+  button.clear {
+    background-color: #e2e8f0;
+    color: #1e293b;
+  }
+  button.clear:hover {
+    background-color: #cbd5e1;
+  }
+  #resultado {
+    margin-top: 25px;
+    display: grid;
+    grid-template-columns: repeat(4, 250px);
+    gap: 20px;
+    justify-content: center;
+  }
+  .grupo {
+    background: #f8fafc;
+    border-radius: 12px;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+    padding: 15px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .highlight {
+    font-weight: bold;
+    color: #0f172a;
+    display: block;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    text-align: center;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Sorteo de Zonas</h1>
+  <p class="subtitle">Pegá los equipos (uno por línea), luego sorteá las zonas.</p>
+
+  <label for="equipos">Lista de equipos:</label>
+  <textarea id="equipos" placeholder="Ejemplo:
+BANCO NACION TDM A
+BANCO NACION TDM B
+ALVEAR CLUB
+..."></textarea>
+
+  <div class="buttons">
+    <button class="sortear" onclick="sortear()">Sortear</button>
+    <button class="clear" onclick="limpiar()">Limpiar</button>
+  </div>
+
+  <div id="resultado">Ingresá los equipos para ver los grupos.</div>
+</div>
+
+<script>
+let yaSorteado = false;
+
+function sortear() {
+  if (yaSorteado) {
+    document.getElementById('resultado').textContent =
+      'Debes limpiar antes de volver a sortear.';
+    return;
+  }
+
+  let equipos = document.getElementById('equipos').value
+                  .trim()
+                  .split('\n')
+                  .map(e => e.trim())
+                  .filter(e => e);
+
+  if (equipos.length === 0) {
+    document.getElementById('resultado').textContent =
+      'Por favor, ingresá los equipos.';
+    return;
+  }
+
+  // Mezclar equipos
+  equipos = equipos.sort(() => Math.random() - 0.5);
+
+  const grupos = [];
+  const excluidos = [];
+  const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+  // Crear grupos de 4/3 como en tu lógica original
+  let tempEquipos = [...equipos];
+  while (tempEquipos.length > 0) {
+    if (tempEquipos.length % 4 === 0 || tempEquipos.length > 4) {
+      grupos.push(tempEquipos.splice(0, 4));
+    } else {
+      grupos.push(tempEquipos.splice(0, 3));
+    }
+  }
+
+  // Aplicar exclusión de clubes repetidos
+  const clubMap = {}; // club -> set de indices de grupo donde está
+  grupos.forEach((grupo, gIdx) => {
+    const nuevos = [];
+    grupo.forEach(equipo => {
+      let club = equipo.startsWith("BANCO NACION") ? "BANCO NACION" : equipo.split(' ')[0];
+      if (!clubMap[club]) clubMap[club] = new Set();
+      if (!clubMap[club].has(gIdx)) {
+        nuevos.push(equipo);
+        clubMap[club].add(gIdx);
+      } else {
+        excluidos.push(equipo);
+      }
+    });
+    grupos[gIdx] = nuevos;
+  });
+
+  // Intentar reubicar equipos de exclusión en grupos incompletos
+  excluidos.slice().forEach((equipo, i) => {
+    let colocado = false;
+    for (let gIdx = 0; gIdx < grupos.length; gIdx++) {
+      let grupo = grupos[gIdx];
+      let club = equipo.startsWith("BANCO NACION") ? "BANCO NACION" : equipo.split(' ')[0];
+      // puede ir si el grupo tiene menos de 4 y no hay otro del mismo club
+      if (grupo.length < 4 && !grupo.some(e => {
+        let c = e.startsWith("BANCO NACION") ? "BANCO NACION" : e.split(' ')[0];
+        return c === club;
+      })) {
+        grupo.push(equipo);
+        clubMap[club].add(gIdx);
+        excluidos.splice(excluidos.indexOf(equipo),1);
+        colocado = true;
+        break;
+      }
+    }
+  });
+
+  // Ordenar grupos por tamaño para que los de 3 queden al final
+  grupos.sort((a,b)=>b.length - a.length);
+
+  // Generar HTML
+  let html = '';
+  grupos.forEach((g,i) => {
+    html += `<div class="grupo"><span class="highlight">Grupo ${letras[i]}:</span>${g.join('<br>')}</div>`;
+  });
+
+  if (excluidos.length > 0) {
+    html += `<div class="grupo" style="background:#fee2e2;"><span class="highlight">Exclusión:</span>${excluidos.join('<br>')}</div>`;
+  }
+
+  document.getElementById('resultado').innerHTML = html;
+  yaSorteado = true;
+}
+
+function limpiar() {
+  document.getElementById('equipos').value = '';
+  document.getElementById('resultado').textContent =
+    'Ingresá los equipos para ver los grupos.';
+  yaSorteado = false;
+}
+</script>
+</body>
+</html>
