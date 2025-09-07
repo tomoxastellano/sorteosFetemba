@@ -82,11 +82,11 @@
     background-color: #cbd5e1;
   }
   #resultado {
-    margin-top: 25px;
-    display: grid;
-    grid-template-columns: repeat(4, 250px);
-    gap: 20px;
-    justify-content: center;
+  margin-top: 25px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); /* columnas dinámicas */
+  gap: 20px;
+  justify-content: center;
   }
   .grupo {
     background: #f8fafc;
